@@ -1,0 +1,33 @@
+# Docker volumes and data
+*.log
+*.sql~
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS files
+Thumbs.db
+desktop.ini
+
+# Temporary files
+*.tmp
+*.bak
+*.cache
+
+# Environment variables (if any)
+.env
+.env.local
+
+# Database dumps (if any)
+*.sql
+!init.sql
+
+# Backup files
+*.backup
+*.txt
+*.pdf
