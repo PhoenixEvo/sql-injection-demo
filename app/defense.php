@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SQL Injection Demo</title>
+    <title>Defense - Prepared Statement Demo</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -50,6 +50,22 @@
         button:hover {
             background-color: #45a049;
         }
+        .nav {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .nav a {
+            margin: 0 10px;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        .nav a:hover {
+            background-color: #0056b3;
+        }
         .message {
             margin-top: 20px;
             padding: 15px;
@@ -71,49 +87,30 @@
             border: 1px solid #bee5eb;
             margin-top: 20px;
         }
-        .nav {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        .nav a {
-            margin: 0 10px;
-            padding: 10px 20px;
-            background-color: #007bff;
-            color: white;
-            text-decoration: none;
+        .code-block {
+            background-color: #f4f4f4;
+            padding: 15px;
             border-radius: 4px;
-            display: inline-block;
+            margin: 15px 0;
+            overflow-x: auto;
         }
-        .nav a:hover {
-            background-color: #0056b3;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        th, td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-        th {
-            background-color: #4CAF50;
-            color: white;
+        .code-block code {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>SQL Injection Demo</h1>
+        <h1>Defense - Prepared Statement Demo</h1>
         <div class="nav">
-            <a href="index.php">Login</a>
+            <a href="index.php">Login (Vulnerable)</a>
             <a href="search.php">Search Products</a>
             <a href="profile.php">Edit Profile</a>
             <a href="defense.php">Defense (Secure)</a>
         </div>
 
-        <h2>Login Form</h2>
+        <h2>Secure Login with Prepared Statement</h2>
         <form method="POST" action="">
             <div class="form-group">
                 <label for="username">Username:</label>
@@ -144,20 +141,22 @@
                     die("<div class='message error'>Connection failed: " . $conn->connect_error . "</div>");
                 }
 
-                // VULNERABLE CODE: Direct string concatenation - SQL Injection vulnerability!
-                $sql = "SELECT * FROM users WHERE username='$username' AND password='$password'";
-                
-                echo "<div class='message info'><strong>SQL Query:</strong> " . htmlspecialchars($sql) . "</div>";
-                
-                $result = $conn->query($sql);
+                // SECURE CODE: Using Prepared Statement to prevent SQL Injection
+                $stmt = $conn->prepare("SELECT * FROM users WHERE username=? AND password=?");
+                $stmt->bind_param("ss", $username, $password);
+                $stmt->execute();
+                $result = $stmt->get_result();
 
-                // Check for SQL errors
-                if (!$result) {
-                    echo "<div class='message error'>";
-                    echo "<h3>SQL Error:</h3>";
-                    echo "<p>" . htmlspecialchars($conn->error) . "</p>";
-                    echo "</div>";
-                } elseif ($result->num_rows > 0) {
+                echo "<div class='message info'>";
+                echo "<strong>SQL Query (Prepared Statement):</strong><br>";
+                echo "<div class='code-block'>";
+                echo "<code>SELECT * FROM users WHERE username=? AND password=?</code><br>";
+                echo "<code>Parameters: username='" . htmlspecialchars($username) . "', password='" . htmlspecialchars($password) . "'</code>";
+                echo "</div>";
+                echo "<p><strong>Note:</strong> The query structure is fixed. User input is treated as data only, not as SQL code.</p>";
+                echo "</div>";
+
+                if ($result && $result->num_rows > 0) {
                     $user = $result->fetch_assoc();
                     echo "<div class='message success'>";
                     echo "<h3>Login Successful!</h3>";
@@ -169,6 +168,7 @@
                     echo "<div class='message error'>Invalid username or password!</div>";
                 }
 
+                $stmt->close();
                 $conn->close();
             } catch (Exception $e) {
                 echo "<div class='message error'>Error: " . htmlspecialchars($e->getMessage()) . "</div>";
@@ -177,15 +177,16 @@
         ?>
 
         <div class="message info">
-            <h3>Demo Instructions:</h3>
-            <p><strong>Normal login:</strong> username: <code>admin</code>, password: <code>admin123</code></p>
-            <p><strong>SQL Injection attack (Method 1 - Comment with #):</strong><br>
-            username: <code>admin' #</code>, password: (leave empty or any value)</p>
-            <p><strong>SQL Injection attack (Method 1b - Comment with --):</strong><br>
-            username: <code>admin' -- </code> (note: space after --), password: (leave empty or any value)</p>
-            <p><strong>SQL Injection attack (Method 2 - OR condition):</strong><br>
-            username: <code>' OR '1'='1</code>, password: <code>' OR '1'='1</code></p>
-            <p><strong>Note:</strong> Method 1 with <code>#</code> is simplest. The comment will ignore the password check.</p>
+            <h3>How Prepared Statement Prevents SQL Injection:</h3>
+            <p><strong>1. Query Structure is Fixed:</strong> The SQL query structure is compiled first with placeholders (?).</p>
+            <p><strong>2. Data is Bound Separately:</strong> User input is bound to placeholders as data, not as SQL code.</p>
+            <p><strong>3. No Code Execution:</strong> Even if user input contains SQL code (like <code>' OR '1'='1</code>), it will be treated as literal string data.</p>
+            <p><strong>4. Try SQL Injection:</strong> Try the same payloads from the vulnerable login page. They won't work here!</p>
+            <p><strong>Example payloads that won't work:</strong></p>
+            <ul>
+                <li>Username: <code>admin' #</code> - Will search for username literally "admin' #"</li>
+                <li>Username: <code>' OR '1'='1</code> - Will search for username literally "' OR '1'='1"</li>
+            </ul>
         </div>
     </div>
 </body>

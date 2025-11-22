@@ -1,7 +1,7 @@
 # Script Thuyết Trình - Demo SQL Injection
 
 ## Slide 7: Demo - Dò tìm lỗ hổng SQL Injection
-
+      
 **Lời dẫn:**
 
 Tiếp theo, chúng em xin minh họa demo tấn công SQL Injection thực tế. Đầu tiên, cần nhấn mạnh việc demo chỉ thực hiện trong môi trường lab an toàn - ở đây nhóm đã setup một ứng dụng web đơn giản chạy trên Docker để thực hành. Chúng ta tuyệt đối không thử các kỹ thuật này trên website thật.

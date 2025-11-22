@@ -99,6 +99,8 @@
         <div class="nav">
             <a href="index.php">Login</a>
             <a href="search.php">Search Products</a>
+            <a href="profile.php">Edit Profile</a>
+            <a href="defense.php">Defense (Secure)</a>
         </div>
 
         <h2>Search Products</h2>

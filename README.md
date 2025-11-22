@@ -47,8 +47,10 @@ docker-compose down
 - `docker-compose.yml`: Cấu hình Docker Compose cho web server và database
 - `Dockerfile`: Build image PHP với extension mysqli
 - `init.sql`: Script khởi tạo database và dữ liệu mẫu
-- `app/index.php`: Trang login dễ bị SQL Injection
-- `app/search.php`: Trang tìm kiếm sản phẩm dễ bị SQL Injection
+- `app/index.php`: Trang login dễ bị SQL Injection (SELECT)
+- `app/search.php`: Trang tìm kiếm sản phẩm dễ bị SQL Injection (SELECT)
+- `app/profile.php`: Trang edit profile dễ bị SQL Injection (UPDATE) - NEW!
+- `app/defense.php`: Trang login an toàn sử dụng Prepared Statement - NEW!
 - `start.bat` / `end.bat` / `reset.bat`: Script tự động cho Windows
 - `HUONG_DAN_SQLMAP.md`: Hướng dẫn sử dụng sqlmap
 - `SCRIPT_THUYET_TRINH.md`: Script thuyết trình chi tiết
@@ -57,7 +59,7 @@ docker-compose down
 
 ## Demo SQL Injection
 
-### 1. Demo Login Bypass
+### 1. Demo Login Bypass (SELECT Statement)
 
 **Trang:** http://localhost:8080/index.php
 
@@ -82,7 +84,7 @@ docker-compose down
 - Password: `' OR '1'='1`
 - Giải thích: Cả 2 điều kiện username và password đều trở thành `'1'='1'` (luôn đúng)
 
-### 2. Demo Search Injection
+### 2. Demo Search Injection (SELECT Statement)
 
 **Trang:** http://localhost:8080/search.php
 
@@ -91,7 +93,39 @@ docker-compose down
 
 **Tấn công SQL Injection:**
 - Keyword: `' OR '1'='1` (hiển thị tất cả sản phẩm)
-- Keyword: `' UNION SELECT 1, database(), 3, 4 --` (lấy tên database)
+- Keyword: `' UNION SELECT 1, database(), 3, 4 #` (lấy tên database)
+
+### 3. Demo UPDATE Statement Injection (NEW!)
+
+**Trang:** http://localhost:8080/profile.php
+
+**Task 1 - Modify your own salary:**
+- Đăng nhập với: `alice` / `seedalice` (hoặc dùng SQL Injection để bypass)
+- Vào trang Edit Profile
+- Trong trường **Nickname**, nhập: `', salary=99999.00 WHERE username='alice`
+- Click Update Profile
+- Kết quả: Salary của bạn được cập nhật thành $99999.00
+
+**Task 2 - Modify other people's salary:**
+- Trong trường **Nickname**, nhập: `', salary=1.00 WHERE username='boby' -- `
+- Click Update Profile
+- Kết quả: Salary của Boby bị giảm xuống $1.00
+
+**Task 3 - Modify other people's password:**
+- Trong trường **Nickname**, nhập: `', password='aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d' WHERE username='boby' -- `
+- (Password hash của "hello123" là: aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d)
+- Click Update Profile
+- Sau đó đăng nhập với: `boby` / `hello123`
+
+### 4. Demo Defense - Prepared Statement (NEW!)
+
+**Trang:** http://localhost:8080/defense.php
+
+Trang này sử dụng Prepared Statement để ngăn chặn SQL Injection. Thử các payload tương tự như trang login vulnerable, bạn sẽ thấy chúng không hoạt động.
+
+**So sánh:**
+- Trang `index.php`: Dễ bị SQL Injection (string concatenation)
+- Trang `defense.php`: An toàn với SQL Injection (Prepared Statement)
 
 ## Giải thích
 
@@ -110,10 +144,12 @@ $sql = "SELECT * FROM users WHERE username='$username' AND password='$password'"
 ## Dữ liệu mẫu
 
 ### Users:
-- admin / admin123 (role: admin)
-- user1 / password1 (role: user)
-- user2 / password2 (role: user)
-- john / secret123 (role: user)
+- admin / admin123 (role: admin, salary: $10000.00)
+- alice / seedalice (role: user, salary: $5000.00)
+- boby / seedboby (role: user, salary: $8000.00)
+- user1 / password1 (role: user, salary: $3000.00)
+- user2 / password2 (role: user, salary: $3500.00)
+- john / secret123 (role: user, salary: $4000.00)
 
 ### Products:
 - Laptop ($1500.00)
@@ -154,6 +190,7 @@ Hoặc trên Windows: chạy `reset.bat`
 
 ## Tài liệu tham khảo
 
+- `TRINH_TU_DEMO.md`: **Trình tự demo chi tiết từng bước** - BẮT ĐẦU TỪ ĐÂY!
 - `SCRIPT_THUYET_TRINH.md`: Script chi tiết để thuyết trình
 - `NGUYEN_LY_KY_THUAT.md`: Giải thích nguyên lý và kiến thức kỹ thuật
 - `SLIDE_DEMO_OUTLINE.md`: Outline cho slide demo
