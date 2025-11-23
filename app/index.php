@@ -145,7 +145,10 @@
                 }
 
                 // VULNERABLE CODE: Direct string concatenation - SQL Injection vulnerability!
-                $sql = "SELECT * FROM users WHERE username='$username' AND password='$password'";
+                // Note: Password is stored as SHA1 hash in database, but we compare plaintext for simplicity in demo
+                // In real application, password should be hashed before comparison
+                $password_hash = sha1($password);
+                $sql = "SELECT * FROM users WHERE username='$username' AND password='$password_hash'";
                 
                 echo "<div class='message info'><strong>SQL Query:</strong> " . htmlspecialchars($sql) . "</div>";
                 

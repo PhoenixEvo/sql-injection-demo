@@ -16,13 +16,14 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 -- Insert sample users
+-- Password is stored as SHA1 hash
 INSERT INTO users (username, password, email, nickname, address, phone, salary, role) VALUES
-('admin', 'admin123', 'admin@example.com', 'Administrator', '123 Admin St', '0123456789', 10000.00, 'admin'),
-('alice', 'seedalice', 'alice@example.com', 'Alice', '456 Main St', '0987654321', 5000.00, 'user'),
-('boby', 'seedboby', 'boby@example.com', 'Boby', '789 Oak Ave', '0111222333', 8000.00, 'user'),
-('user1', 'password1', 'user1@example.com', 'User One', '321 First St', '0444555666', 3000.00, 'user'),
-('user2', 'password2', 'user2@example.com', 'User Two', '654 Second St', '0777888999', 3500.00, 'user'),
-('john', 'secret123', 'john@example.com', 'John', '987 Third St', '0222333444', 4000.00, 'user');
+('admin', SHA1('admin123'), 'admin@example.com', 'Administrator', '123 Admin St', '0123456789', 10000.00, 'admin'),
+('alice', SHA1('seedalice'), 'alice@example.com', 'Alice', '456 Main St', '0987654321', 5000.00, 'user'),
+('boby', SHA1('seedboby'), 'boby@example.com', 'Boby', '789 Oak Ave', '0111222333', 8000.00, 'user'),
+('user1', SHA1('password1'), 'user1@example.com', 'User One', '321 First St', '0444555666', 3000.00, 'user'),
+('user2', SHA1('password2'), 'user2@example.com', 'User Two', '654 Second St', '0777888999', 3500.00, 'user'),
+('john', SHA1('secret123'), 'john@example.com', 'John', '987 Third St', '0222333444', 4000.00, 'user');
 
 -- Create products table for search demo
 CREATE TABLE IF NOT EXISTS products (

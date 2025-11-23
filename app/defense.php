@@ -141,9 +141,12 @@
                     die("<div class='message error'>Connection failed: " . $conn->connect_error . "</div>");
                 }
 
+                // Hash password before comparison (password is stored as SHA1 hash in database)
+                $password_hash = sha1($password);
+
                 // SECURE CODE: Using Prepared Statement to prevent SQL Injection
                 $stmt = $conn->prepare("SELECT * FROM users WHERE username=? AND password=?");
-                $stmt->bind_param("ss", $username, $password);
+                $stmt->bind_param("ss", $username, $password_hash);
                 $stmt->execute();
                 $result = $stmt->get_result();
 
@@ -151,9 +154,9 @@
                 echo "<strong>SQL Query (Prepared Statement):</strong><br>";
                 echo "<div class='code-block'>";
                 echo "<code>SELECT * FROM users WHERE username=? AND password=?</code><br>";
-                echo "<code>Parameters: username='" . htmlspecialchars($username) . "', password='" . htmlspecialchars($password) . "'</code>";
+                echo "<code>Parameters: username='" . htmlspecialchars($username) . "', password='" . htmlspecialchars($password_hash) . "' (SHA1 hash)</code>";
                 echo "</div>";
-                echo "<p><strong>Note:</strong> The query structure is fixed. User input is treated as data only, not as SQL code.</p>";
+                echo "<p><strong>Note:</strong> The query structure is fixed. User input is treated as data only, not as SQL code. Password is hashed before comparison.</p>";
                 echo "</div>";
 
                 if ($result && $result->num_rows > 0) {
